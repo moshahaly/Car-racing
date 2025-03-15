@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Car Racing</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #333;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        #gameContainer {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(to bottom, #666 0%, #444 100%);
+            border: 3px solid white;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .car {
+            position: absolute;
+            width: 12%;
+            height: 15%;
+            transform-origin: center bottom;
+        }
+
+        #playerCar {
+            bottom: 5%;
+            left: 44%;
+            top: auto !important;
+        }
+
+        .car-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: red;
+            border-radius: 15% 15% 5% 5%;
+            clip-path: polygon(0 20%, 15% 0, 85% 0, 100% 20%, 100% 80%, 85% 100%, 15% 100%, 0 80%);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        }
+
+        .player-car .car-body {
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+        }
+
+        .enemy-car .car-body {
+            background: linear-gradient(45deg, #0000ff, #000088);
+        }
+
+        .car-roof {
+            position: absolute;
+            width: 60%;
+            height: 40%;
+            background: rgba(255, 255, 255, 0.2);
+            left: 20%;
+            top: 15%;
+            border-radius: 10% 10% 0 0;
+            clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
+        }
+
+        .car-spoiler {
+            position: absolute;
+            width: 30%;
+            height: 15%;
+            background: #333;
+            top: -8%;
+            left: 35%;
+            border-radius: 5px;
+        }
+
+        .car-wheels {
+            position: absolute;
+            width: 100%;
+            height: 25%;
+            bottom: -5%;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .wheel {
+            width: 25%;
+            height: 100%;
+            background: #222;
+            border-radius: 50%;
+            border: 2px solid #444;
+        }
+
+        .car-light {
+            position: absolute;
+            width: 8%;
+            height: 8%;
+            background: yellow;
+            border-radius: 50%;
+        }
+
+        .front-light {
+            right: 10%;
+            top: 30%;
+        }
+
+        .rear-light {
+            left: 10%;
+            top: 30%;
+            background: #ff3300;
+        }
+
+        #score {
+            position: absolute;
+            top: 2%;
+            right: 2%;
+            color: white;
+            font-family: Arial;
+            font-size: 5vmin;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 5%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 5%;
+            box-sizing: border-box;
+        }
+        
+        .control-btn {
+            width: 15vmin;
+            height: 15vmin;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 8vmin;
+            color: white;
+            touch-action: manipulation;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.5);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 15px;
+            z-index: 100;
+            width: 80%;
+            max-width: 400px;
+            border: 2px solid white;
+        }
+        
+        #restartBtn {
+            background: #4CAF50;
+            border: none;
+            padding: 15px 30px;
+            color: white;
+            border-radius: 25px;
+            margin-top: 15px;
+            font-size: 4vmin;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #restartBtn:active {
+            transform: scale(0.95);
+        }
+
+        .enemy-car {
+            top: -15%;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="score">Score: 0</div>
+        <div id="playerCar" class="car player-car">
+            <div class="car-body"></div>
+            <div class="car-roof"></div>
+            <div class="car-spoiler"></div>
+            <div class="car-wheels">
+                <div class="wheel"></div>
+                <div class="wheel"></div>
+            </div>
+            <div class="car-light front-light"></div>
+            <div class="car-light rear-light"></div>
+        </div>
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button id="restartBtn">Play Again</button>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <div class="control-btn" id="leftBtn">←</div>
+        <div class="control-btn" id="rightBtn">→</div>
+    </div>
+
+    <script>
+        const playerCar = document.getElementById('playerCar');
+        const gameContainer = document.getElementById('gameContainer');
+        const scoreElement = document.getElementById('score');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScore = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        
+        let playerX = 44;
+        let score = 0;
+        let gameSpeed = 5;
+        let enemies = [];
+        let isMovingLeft = false;
+        let isMovingRight = false;
+        let gameOver = false;
+        let lastSpeedIncrease = 0;
+        let spawnInterval = 1500;
+        let enemySpawner;
+
+        function handleTouchStart(direction) {
+            if (direction === 'left') {
+                isMovingLeft = true;
+            } else {
+                isMovingRight = true;
+            }
+        }
+
+        function handleTouchEnd() {
+            isMovingLeft = false;
+            isMovingRight = false;
+        }
+
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleTouchStart('left');
+        });
+        
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleTouchStart('right');
+        });
+        
+        [leftBtn, rightBtn].forEach(btn => {
+            btn.addEventListener('touchend', handleTouchEnd);
+            btn.addEventListener('touchcancel', handleTouchEnd);
+        });
+
+        gameContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (gameOver) return;
+            const touch = e.touches[0];
+            const rect = gameContainer.getBoundingClientRect();
+            const touchX = touch.clientX - rect.left;
+            const newX = (touchX / rect.width) * 100;
+            playerX = Math.max(5, Math.min(83, newX));
+            playerCar.style.left = playerX + '%';
+        }, { passive: false });
+
+        function createEnemy() {
+            const enemy = document.createElement('div');
+            enemy.className = 'car enemy-car';
+            enemy.innerHTML = `
+                <div class="car-body"></div>
+                <div class="car-roof"></div>
+                <div class="car-wheels">
+                    <div class="wheel"></div>
+                    <div class="wheel"></div>
+                </div>
+                <div class="car-light front-light"></div>
+                <div class="car-light rear-light"></div>
+            `;
+            enemy.style.left = Math.random() * 83 + 5 + '%';
+            enemy.style.top = '-15%';
+            gameContainer.appendChild(enemy);
+            enemies.push({
+                element: enemy,
+                x: parseFloat(enemy.style.left),
+                y: parseFloat(enemy.style.top)
+            });
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            if (isMovingLeft && playerX > 5) playerX -= 0.7;
+            if (isMovingRight && playerX < 83) playerX += 0.7;
+            playerCar.style.left = playerX + '%';
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.y += gameSpeed * 0.3;
+                enemy.element.style.top = enemy.y + '%';
+
+                if (enemy.y > 100) {
+                    enemy.element.remove();
+                    enemies.splice(i, 1);
+                    score += 10;
+                    scoreElement.textContent = `Score: ${score}`;
+                }
+
+                const playerRect = playerCar.getBoundingClientRect();
+                const enemyRect = enemy.element.getBoundingClientRect();
+                const padding = 8;
+
+                if (!(playerRect.right - padding < enemyRect.left + padding ||
+                    playerRect.left + padding > enemyRect.right - padding ||
+                    playerRect.bottom - padding < enemyRect.top + padding ||
+                    playerRect.top + padding > enemyRect.bottom - padding)) {
+                    
+                    gameOver = true;
+                    gameOverScreen.style.display = 'block';
+                    finalScore.textContent = score;
+                    return;
+                }
+            }
+
+            if (score - lastSpeedIncrease >= 100) {
+                lastSpeedIncrease = score;
+                gameSpeed += 1;
+                spawnInterval = Math.max(800, spawnInterval - 50);
+                clearInterval(enemySpawner);
+                enemySpawner = setInterval(createEnemy, spawnInterval);
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        restartBtn.addEventListener('click', () => {
+            location.reload();
+        });
+
+        enemySpawner = setInterval(createEnemy, spawnInterval);
+        update();
+    </script>
+</body>
+</html>
